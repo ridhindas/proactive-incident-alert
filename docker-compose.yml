@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    command: uvicorn app:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 150M # Hard limit to simulate real-world OOM constraints
+
+  collector:
+    build: .
+    command: python collector.py
+    restart: always
+    volumes:
+      - metrics_vol:/app
+    depends_on:
+      - app
+
+  predictor:
+    build: .
+    command: python predictor.py
+    restart: always
+    volumes:
+      - metrics_vol:/app
+    depends_on:
+      - collector
+    environment:
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+
+volumes:
+  metrics_vol:
